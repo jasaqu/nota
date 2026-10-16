@@ -66,7 +66,7 @@ input:focus,select:focus,button:focus-visible{outline:3px solid var(--acc);outli
   <button class="btn alt" id="reset">Kosongkan</button>
  </section>
 </div>
-<div id="pv"><div class="pv-in"><p class="pv-t">Preview nota</p><div id="nota"></div><div class="pv-bar"><button class="btn" id="go">Cetak sekarang</button><button class="btn" id="wa-send" style="background:#25d366;color:#08210f">Kirim ke WhatsApp</button><button class="btn alt" id="back">Kembali ubah data</button></div></div></div>
+<div id="pv"><div class="pv-in"><p class="pv-t">Preview nota</p><div id="nota"></div><p class="pv-t" style="margin-top:10px;font-weight:400">Lebar kertas printer: <select id="pw" style="width:auto"><option value="32">58 mm</option><option value="48">80 mm</option></select></p><div class="pv-bar"><button class="btn" id="btprint">Cetak ke Printer Bluetooth</button><button class="btn alt" id="go">Cetak lewat menu HP</button><button class="btn" id="wa-send" style="background:#25d366;color:#08210f">Kirim JPG ke WhatsApp</button><button class="btn alt" id="back">Kembali ubah data</button></div></div></div>
 <script>
 const $=s=>document.querySelector(s);
 const rp=n=>"Rp"+new Intl.NumberFormat("id-ID").format(Math.round(n||0));
@@ -94,9 +94,57 @@ $("#hg").addEventListener("change",()=>{try{localStorage.setItem("hargaBata",$("
 $("#as").addEventListener("change",()=>{try{localStorage.setItem("alamatJual",$("#as").value)}catch(e){}});
 $("#print").onclick=()=>{
  if(!jml()||!hrg()){alert("Isi jumlah pesanan dan harga per biji dulu.");return}
- nota();$("#pv").classList.add("on");$("#pv").scrollTop=0;
+ nota();$("#pv").classList.add("on");$("#pv").scrollTop=0;pvBlob=null;notaBlob().then(b=>pvBlob=b);
 };
 $("#go").onclick=()=>window.print();
+let btDev=null,btChar=null;
+const BT_SV=["000018f0-0000-1000-8000-00805f9b34fb","0000ff00-0000-1000-8000-00805f9b34fb","0000ffe0-0000-1000-8000-00805f9b34fb","0000fee7-0000-1000-8000-00805f9b34fb","49535343-fe7d-4ae5-8fa9-9fafd205e455","e7810a71-73ae-499d-8c15-faa9aef0c3f2"];
+async function btConnect(){
+ if(btChar&&btDev&&btDev.gatt.connected)return btChar;
+ const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:BT_SV});
+ const srv=await dev.gatt.connect();
+ for(const s of await srv.getPrimaryServices()){
+  for(const c of await s.getCharacteristics()){
+   if(c.properties.write||c.properties.writeWithoutResponse){btDev=dev;btChar=c;return c}
+  }
+ }
+ throw new Error("Printer tidak dikenali");
+}
+function escpos(cols){
+ const enc=new TextEncoder(),out=[];
+ const raw=(...b)=>out.push(...b);
+ const put=t=>out.push(...enc.encode(String(t).replace(/[^\x20-\x7E]/g,"")));
+ const wrapT=(t,w)=>{const r=[];let l="";String(t).replace(/[^\x20-\x7E]/g,"").split(" ").forEach(s=>{const tt=l?l+" "+s:s;if(l&&tt.length>w){r.push(l);l=s}else l=tt});r.push(l);return r};
+ const line=t=>{put(t);raw(10)};
+ const hr=()=>line("-".repeat(cols));
+ const kv=(k,v)=>{k=String(k);v=String(v);if(k.length+v.length+1<=cols)line(k+" ".repeat(cols-k.length-v.length)+v);else wrapT(k+": "+v,cols).forEach(line)};
+ const d=new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
+ raw(0x1b,0x40,0x1b,0x61,1,0x1b,0x45,1,0x1d,0x21,0x11);line("Bata Bolong");raw(0x1d,0x21,0,0x1b,0x45,0);
+ wrapT($("#as").value,cols).forEach(line);raw(0x1b,0x61,0);hr();
+ kv("Tanggal",d);kv("Pembeli",$("#nm").value||"-");kv("Alamat",$("#al").value||"-");hr();
+ kv("Jumlah pesanan",new Intl.NumberFormat("id-ID").format(jml())+" biji");kv("Harga per biji",rp(hrg()));raw(0x1b,0x45,1);kv("Sistem bayar",$("#mp").value);raw(0x1b,0x45,0);hr();
+ raw(0x1b,0x45,1);kv("TOTAL BAYAR",rp(jml()*hrg()));kv("Status",$("#sp").value.toUpperCase());raw(0x1b,0x45,0);hr();
+ raw(0x1b,0x61,1);wrapT("Terima kasih atas pembelian Anda",cols).forEach(line);wrapT("Kami tunggu pesanan berikutnya.",cols).forEach(line);raw(0x1b,0x64,4,0x1b,0x61,0);
+ return new Uint8Array(out);
+}
+$("#btprint").onclick=async()=>{
+ const btn=$("#btprint"),t0=btn.textContent;
+ try{
+  if(!navigator.bluetooth)throw Object.assign(new Error("tidak didukung"),{name:"NoBT"});
+  const ch=await btConnect(),data=escpos(+$("#pw").value);
+  btn.textContent="Mencetak...";btn.disabled=true;
+  for(let i=0;i<data.length;i+=100){
+   const p=data.slice(i,i+100);
+   if(ch.properties.writeWithoutResponse)await ch.writeValueWithoutResponse(p);else await ch.writeValue(p);
+   await new Promise(r=>setTimeout(r,40));
+  }
+ }catch(e){
+  btChar=null;
+  if(e.name==="NotFoundError")return;
+  if(e.name==="NoBT"||e.name==="SecurityError")alert("Browser atau halaman ini belum mengizinkan Bluetooth langsung. Gunakan Chrome di Android, atau pakai tombol Cetak lewat menu HP.");
+  else alert("Gagal mencetak: "+e.message);
+ }finally{btn.textContent=t0;btn.disabled=false}
+};
 function waText(){
  const d=new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"}),f=n=>new Intl.NumberFormat("id-ID").format(n);
  return ["*BATA BOLONG*",$("#as").value,"","*NOTA PEMBELIAN*","Tanggal: "+d,"Pembeli: "+($("#nm").value||"-"),"Alamat: "+($("#al").value||"-"),"",
@@ -104,11 +152,35 @@ function waText(){
  "*TOTAL BAYAR: "+rp(jml()*hrg())+"*","Status: *"+$("#sp").value.toUpperCase()+"*","",
  "Terima kasih atas pembelian Anda \ud83d\ude4f","Kami tunggu pesanan berikutnya."].join("\n");
 }
-$("#wa-send").onclick=()=>{
- let n=$("#wa").value.replace(/\D/g,"");
- if(n.startsWith("0"))n="62"+n.slice(1);
- const url="https://wa.me/"+n+"?text="+encodeURIComponent(waText());
- window.open(url,"_blank")||(location.href=url);
+let pvBlob=null;
+async function notaBlob(){
+ const W=540,P=30,M='"Courier New",monospace',c=document.createElement("canvas");
+ c.width=W;c.height=2400;
+ const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,W,2400);x.fillStyle="#000";x.textBaseline="top";
+ let y=P;
+ const wrap=(t,mw)=>{const out=[];String(t).split("\n").forEach(p=>{let l="";p.split(" ").forEach(w=>{const tt=l?l+" "+w:w;if(l&&x.measureText(tt).width>mw){out.push(l);l=w}else l=tt});out.push(l)});return out};
+ const ctr=(t,s,b)=>{x.font=(b?"bold ":"")+s+"px "+M;x.textAlign="center";wrap(t,W-2*P).forEach(l=>{x.fillText(l,W/2,y);y+=s*1.4})};
+ const hr=()=>{y+=6;x.setLineDash([6,5]);x.lineWidth=2;x.beginPath();x.moveTo(P,y);x.lineTo(W-P,y);x.stroke();y+=18};
+ const kv=(k,v,vb,s,kb)=>{s=s||22;const F=b=>(b?"bold ":"")+s+"px "+M;x.font=F(kb);const lw=x.measureText(k).width+16;x.font=F(vb);const ls=wrap(v,W-2*P-lw);x.font=F(kb);x.textAlign="left";x.fillText(k,P,y);x.font=F(vb);x.textAlign="right";ls.forEach((l,i)=>x.fillText(l,W-P,y+i*s*1.4));y+=ls.length*s*1.4};
+ const d=new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
+ ctr("Bata Bolong",42,true);ctr($("#as").value,20);hr();
+ kv("Tanggal",d);kv("Pembeli",$("#nm").value||"-");kv("Alamat",$("#al").value||"-");hr();
+ kv("Jumlah pesanan",new Intl.NumberFormat("id-ID").format(jml())+" biji");kv("Harga per biji",rp(hrg()));kv("Sistem bayar",$("#mp").value,true);hr();
+ kv("TOTAL BAYAR",rp(jml()*hrg()),true,26,true);kv("Status",$("#sp").value.toUpperCase(),true);hr();
+ ctr("Terima kasih atas pembelian Anda \ud83d\ude4f\nKami tunggu pesanan berikutnya.",20);
+ const o=document.createElement("canvas");o.width=W;o.height=Math.ceil(y+P);
+ const g=o.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,W,o.height);g.drawImage(c,0,0);
+ return new Promise(r=>o.toBlob(r,"image/jpeg",.92));
+}
+$("#wa-send").onclick=async()=>{
+ const blob=pvBlob||await notaBlob();
+ const name="nota-"+(($("#nm").value||"pembeli").trim().replace(/[^A-Za-z0-9]+/g,"-"))+".jpg";
+ const file=new File([blob],name,{type:"image/jpeg"});
+ try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file]});return}}catch(e){if(e&&e.name==="AbortError")return}
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();
+ let n=$("#wa").value.replace(/\D/g,"");if(n.startsWith("0"))n="62"+n.slice(1);
+ window.open("https://wa.me/"+n,"_blank");
+ setTimeout(()=>alert("Nota JPG sudah diunduh. Lampirkan gambarnya di chat WhatsApp."),400);
 };
 $("#back").onclick=()=>$("#pv").classList.remove("on");
 document.addEventListener("keydown",e=>{if(e.key==="Escape")$("#pv").classList.remove("on")});
