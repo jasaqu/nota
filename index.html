@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nota Bata Bolong</title>
+<style>
+:root{--bg:#e8e7e3;--card:#f7f6f3;--ink:#1f2328;--mut:#666b73;--line:#cfcdc6;--acc:#f2b705;--dark:#27313d;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171a1e;--card:#21262c;--ink:#ecebe7;--mut:#9aa0a8;--line:#3a4048;--dark:#2f3b49}}
+:root[data-theme="dark"]{--bg:#171a1e;--card:#21262c;--ink:#ecebe7;--mut:#9aa0a8;--line:#3a4048;--dark:#2f3b49}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.app{max-width:520px;margin:0 auto;padding:16px}
+.top{background:var(--dark);color:#f7f6f3;padding:14px 16px;border-radius:6px;border-bottom:6px solid var(--acc);margin-bottom:14px}
+.top h1{margin:0;font-size:24px}
+section{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px;margin-bottom:14px}
+label{display:block;font-size:14px;color:var(--mut);margin:10px 0 4px}
+label:first-child{margin-top:0}
+input,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:11px 10px}
+input:focus,select:focus,button:focus-visible{outline:3px solid var(--acc);outline-offset:1px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tot{display:flex;justify-content:space-between;align-items:baseline;margin-top:14px;font-size:20px;font-weight:700}
+.tot span:last-child{font-size:30px}
+.btn{width:100%;font:600 17px system-ui,sans-serif;border:0;border-radius:4px;padding:14px;cursor:pointer;background:var(--acc);color:#1f2328;margin-top:10px}
+.btn.alt{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+#pv{display:none;position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.65);overflow:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px))}
+#pv.on{display:block}
+.pv-in{max-width:420px;margin:0 auto}
+.pv-t{color:#fff;font-weight:700;margin:0 0 8px}
+#nota{background:#fff;color:#000;border-radius:4px;padding:18px;font:16px/1.5 "Courier New",monospace}
+@media print{
+ @page{margin:10mm}
+ body{background:#fff}.app,.pv-bar,.pv-t{display:none!important}
+ #pv{display:block;position:static;background:none;padding:0;overflow:visible}
+ .pv-in{max-width:90mm}
+ #nota{padding:0;border-radius:0}
+}
+#nota h2{margin:0;text-align:center;font-size:20px}
+#nota .c{text-align:center;font-size:13px}
+#nota .bb{display:block;font-size:28px;font-weight:700;line-height:1.2;margin-bottom:2px}
+#nota hr{border:0;border-top:1px dashed #000;margin:10px 0}
+#nota .l{display:flex;justify-content:space-between;gap:12px;margin:3px 0}
+#nota .l b:last-child,#nota .l span:last-child{text-align:right}
+#nota .big{font-size:20px;font-weight:700}
+</style>
+</head>
+<body>
+<div class="app">
+ <div class="top"><h1>Nota Bata Bolong</h1></div>
+ <section>
+  <label for="nm">Nama pembeli</label><input id="nm" autocomplete="off">
+  <label for="al">Alamat</label><input id="al" autocomplete="off">
+  <label for="wa">No. WhatsApp pembeli (opsional)</label><input id="wa" type="tel" inputmode="tel" autocomplete="off" placeholder="08xxxxxxxxxx">
+  <div class="g2">
+   <div><label for="jm">Jumlah pesanan (biji)</label><input id="jm" type="number" min="0" inputmode="numeric"></div>
+   <div><label for="hg">Harga per biji (Rp)</label><input id="hg" type="number" min="0" inputmode="numeric"></div>
+  </div>
+  <div class="g2">
+   <div><label for="mp">Metode pembayaran</label><select id="mp"><option>Tunai</option><option>Transfer</option></select></div>
+   <div><label for="sp">Status pembayaran</label><select id="sp"><option>Lunas</option><option>Belum lunas</option></select></div>
+  </div>
+  <input id="as" type="hidden">
+  <div class="tot"><span>Total bayar</span><span id="tot">Rp0</span></div>
+  <button class="btn" id="print">Preview nota</button>
+  <button class="btn alt" id="reset">Kosongkan</button>
+ </section>
+</div>
+<div id="pv"><div class="pv-in"><p class="pv-t">Preview nota</p><div id="nota"></div><div class="pv-bar"><button class="btn" id="go">Cetak sekarang</button><button class="btn" id="wa-send" style="background:#25d366;color:#08210f">Kirim ke WhatsApp</button><button class="btn alt" id="back">Kembali ubah data</button></div></div></div>
+<script>
+const $=s=>document.querySelector(s);
+const rp=n=>"Rp"+new Intl.NumberFormat("id-ID").format(Math.round(n||0));
+const esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const jml=()=>Math.max(0,parseFloat($("#jm").value)||0), hrg=()=>Math.max(0,parseFloat($("#hg").value)||0);
+try{$("#hg").value=localStorage.getItem("hargaBata")||""}catch(e){}
+let sv="";try{sv=localStorage.getItem("alamatJual")}catch(e){}
+$("#as").value=sv||"Dusun 5 Sendangasih Kec. Sendang Agung Lampung Tengah";
+function upd(){$("#tot").textContent=rp(jml()*hrg())}
+function nota(){
+ const d=new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
+ $("#nota").innerHTML=`<h2>NOTA PEMBELIAN</h2><div class="c"><b class="bb">Bata Bolong</b>${esc($("#as").value)}</div><hr>
+ <div class="l"><span>Tanggal</span><span>${d}</span></div>
+ <div class="l"><span>Pembeli</span><span>${esc($("#nm").value)||"-"}</span></div>
+ <div class="l"><span>Alamat</span><span>${esc($("#al").value)||"-"}</span></div><hr>
+ <div class="l"><span>Jumlah pesanan</span><span>${new Intl.NumberFormat("id-ID").format(jml())} biji</span></div>
+ <div class="l"><span>Harga per biji</span><span>${rp(hrg())}</span></div>
+ <div class="l"><span>Metode bayar</span><span>${$("#mp").value}</span></div><hr>
+ <div class="l big"><span>TOTAL BAYAR</span><span>${rp(jml()*hrg())}</span></div>
+ <div class="l"><span>Status</span><b>${$("#sp").value.toUpperCase()}</b></div><hr>
+ <div class="c">Terima kasih atas pembelian Anda 🙏<br>Kami tunggu pesanan berikutnya.</div>`;
+}
+["#jm","#hg"].forEach(s=>$(s).addEventListener("input",upd));
+$("#hg").addEventListener("change",()=>{try{localStorage.setItem("hargaBata",$("#hg").value)}catch(e){}});
+$("#as").addEventListener("change",()=>{try{localStorage.setItem("alamatJual",$("#as").value)}catch(e){}});
+$("#print").onclick=()=>{
+ if(!jml()||!hrg()){alert("Isi jumlah pesanan dan harga per biji dulu.");return}
+ nota();$("#pv").classList.add("on");$("#pv").scrollTop=0;
+};
+$("#go").onclick=()=>window.print();
+function waText(){
+ const d=new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"}),f=n=>new Intl.NumberFormat("id-ID").format(n);
+ return ["*BATA BOLONG*",$("#as").value,"","*NOTA PEMBELIAN*","Tanggal: "+d,"Pembeli: "+($("#nm").value||"-"),"Alamat: "+($("#al").value||"-"),"",
+ "Jumlah pesanan: "+f(jml())+" biji","Harga per biji: "+rp(hrg()),"Metode bayar: "+$("#mp").value,"",
+ "*TOTAL BAYAR: "+rp(jml()*hrg())+"*","Status: *"+$("#sp").value.toUpperCase()+"*","",
+ "Terima kasih atas pembelian Anda \ud83d\ude4f","Kami tunggu pesanan berikutnya."].join("\n");
+}
+$("#wa-send").onclick=()=>{
+ let n=$("#wa").value.replace(/\D/g,"");
+ if(n.startsWith("0"))n="62"+n.slice(1);
+ const url="https://wa.me/"+n+"?text="+encodeURIComponent(waText());
+ window.open(url,"_blank")||(location.href=url);
+};
+$("#back").onclick=()=>$("#pv").classList.remove("on");
+document.addEventListener("keydown",e=>{if(e.key==="Escape")$("#pv").classList.remove("on")});
+$("#reset").onclick=()=>{["#nm","#al","#jm","#wa"].forEach(s=>$(s).value="");$("#mp").selectedIndex=0;$("#sp").selectedIndex=0;upd()};
+upd();
+</script>
+</body>
+</html>
