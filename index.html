@@ -57,7 +57,7 @@ input:focus,select:focus,button:focus-visible{outline:3px solid var(--acc);outli
    <div><label for="hg">Harga per biji (Rp)</label><input id="hg" type="number" min="0" inputmode="numeric"></div>
   </div>
   <div class="g2">
-   <div><label for="mp">Metode pembayaran</label><select id="mp"><option>Tunai</option><option>Transfer</option></select></div>
+   <div><label for="mp">Sistem pembayaran</label><select id="mp"><option>COD</option><option>Transfer</option></select></div>
    <div><label for="sp">Status pembayaran</label><select id="sp"><option>Lunas</option><option>Belum lunas</option></select></div>
   </div>
   <input id="as" type="hidden">
@@ -84,7 +84,7 @@ function nota(){
  <div class="l"><span>Alamat</span><span>${esc($("#al").value)||"-"}</span></div><hr>
  <div class="l"><span>Jumlah pesanan</span><span>${new Intl.NumberFormat("id-ID").format(jml())} biji</span></div>
  <div class="l"><span>Harga per biji</span><span>${rp(hrg())}</span></div>
- <div class="l"><span>Metode bayar</span><span>${$("#mp").value}</span></div><hr>
+ <div class="l"><span>Sistem bayar</span><b>${$("#mp").value}</b></div><hr>
  <div class="l big"><span>TOTAL BAYAR</span><span>${rp(jml()*hrg())}</span></div>
  <div class="l"><span>Status</span><b>${$("#sp").value.toUpperCase()}</b></div><hr>
  <div class="c">Terima kasih atas pembelian Anda 🙏<br>Kami tunggu pesanan berikutnya.</div>`;
@@ -100,7 +100,7 @@ $("#go").onclick=()=>window.print();
 function waText(){
  const d=new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"}),f=n=>new Intl.NumberFormat("id-ID").format(n);
  return ["*BATA BOLONG*",$("#as").value,"","*NOTA PEMBELIAN*","Tanggal: "+d,"Pembeli: "+($("#nm").value||"-"),"Alamat: "+($("#al").value||"-"),"",
- "Jumlah pesanan: "+f(jml())+" biji","Harga per biji: "+rp(hrg()),"Metode bayar: "+$("#mp").value,"",
+ "Jumlah pesanan: "+f(jml())+" biji","Harga per biji: "+rp(hrg()),"Sistem bayar: "+$("#mp").value,"",
  "*TOTAL BAYAR: "+rp(jml()*hrg())+"*","Status: *"+$("#sp").value.toUpperCase()+"*","",
  "Terima kasih atas pembelian Anda \ud83d\ude4f","Kami tunggu pesanan berikutnya."].join("\n");
 }
