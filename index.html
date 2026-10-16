@@ -154,20 +154,20 @@ function waText(){
 }
 let pvBlob=null;
 async function notaBlob(){
- const W=540,P=30,M='"Courier New",monospace',c=document.createElement("canvas");
+ const W=384,P=16,M='"Courier New",monospace',c=document.createElement("canvas");
  c.width=W;c.height=2400;
  const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,W,2400);x.fillStyle="#000";x.textBaseline="top";
  let y=P;
  const wrap=(t,mw)=>{const out=[];String(t).split("\n").forEach(p=>{let l="";p.split(" ").forEach(w=>{const tt=l?l+" "+w:w;if(l&&x.measureText(tt).width>mw){out.push(l);l=w}else l=tt});out.push(l)});return out};
  const ctr=(t,s,b)=>{x.font=(b?"bold ":"")+s+"px "+M;x.textAlign="center";wrap(t,W-2*P).forEach(l=>{x.fillText(l,W/2,y);y+=s*1.4})};
  const hr=()=>{y+=6;x.setLineDash([6,5]);x.lineWidth=2;x.beginPath();x.moveTo(P,y);x.lineTo(W-P,y);x.stroke();y+=18};
- const kv=(k,v,vb,s,kb)=>{s=s||22;const F=b=>(b?"bold ":"")+s+"px "+M;x.font=F(kb);const lw=x.measureText(k).width+16;x.font=F(vb);const ls=wrap(v,W-2*P-lw);x.font=F(kb);x.textAlign="left";x.fillText(k,P,y);x.font=F(vb);x.textAlign="right";ls.forEach((l,i)=>x.fillText(l,W-P,y+i*s*1.4));y+=ls.length*s*1.4};
+ const kv=(k,v,vb,s,kb)=>{s=s||16;const F=b=>(b?"bold ":"")+s+"px "+M;x.font=F(kb);const lw=x.measureText(k).width+16;x.font=F(vb);const ls=wrap(v,W-2*P-lw);x.font=F(kb);x.textAlign="left";x.fillText(k,P,y);x.font=F(vb);x.textAlign="right";ls.forEach((l,i)=>x.fillText(l,W-P,y+i*s*1.4));y+=ls.length*s*1.4};
  const d=new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
- ctr("Bata Bolong",42,true);ctr($("#as").value,20);hr();
+ ctr("Bata Bolong",30,true);ctr($("#as").value,14);hr();
  kv("Tanggal",d);kv("Pembeli",$("#nm").value||"-");kv("Alamat",$("#al").value||"-");hr();
  kv("Jumlah pesanan",new Intl.NumberFormat("id-ID").format(jml())+" biji");kv("Harga per biji",rp(hrg()));kv("Sistem bayar",$("#mp").value,true);hr();
- kv("TOTAL BAYAR",rp(jml()*hrg()),true,26,true);kv("Status",$("#sp").value.toUpperCase(),true);hr();
- ctr("Terima kasih atas pembelian Anda \ud83d\ude4f\nKami tunggu pesanan berikutnya.",20);
+ kv("TOTAL BAYAR",rp(jml()*hrg()),true,19,true);kv("Status",$("#sp").value.toUpperCase(),true);hr();
+ ctr("Terima kasih atas pembelian Anda \ud83d\ude4f\nKami tunggu pesanan berikutnya.",14);
  const o=document.createElement("canvas");o.width=W;o.height=Math.ceil(y+P);
  const g=o.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,W,o.height);g.drawImage(c,0,0);
  return new Promise(r=>o.toBlob(r,"image/jpeg",.92));
