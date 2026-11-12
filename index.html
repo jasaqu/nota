@@ -211,6 +211,30 @@ function struk(){
  return ascii(L.join("\n"))}
 function wrapT(s,w){s=ascii(s);var out=[],cur='';s.split(' ').forEach(function(wd){while(wd.length>w){if(cur){out.push(cur);cur=''}out.push(wd.slice(0,w));wd=wd.slice(w)}if(!cur)cur=wd;else if((cur+' '+wd).length<=w)cur+=' '+wd;else{out.push(cur);cur=wd}});if(cur)out.push(cur);return out.length?out:['']}
 function bangun(){
+ var T=[],g="-".repeat(W),e="=".repeat(W);
+ function F(s){s=ascii(s);return (s+" ".repeat(W)).slice(0,W)}
+ function add(s){T.push(F(s))}
+ function mid(s){wrapT(s,W).forEach(function(x){add(" ".repeat(Math.floor((W-x.length)/2))+x)})}
+ function row(l,r){l=ascii(l);r=ascii(r);
+  if(l.length+r.length+1<=W){add(l+" ".repeat(W-l.length-r.length)+r)}
+  else{wrapT(l,W).forEach(function(x){add(x)});add(" ".repeat(Math.max(0,W-r.length))+r)}}
+ mid("NOTA BATA BOLONG");mid(S.tgl);if(S.nama)mid("Pembeli: "+S.nama);
+ add(g);add("ORDERAN");add(g);
+ S.items.forEach(function(it){
+  wrapT(it.ket||"Barang",W).forEach(function(x){add(x)});
+  row("  "+n(it.qty).toLocaleString("id-ID")+" x "+rpa(n(it.harga)),rpa(n(it.qty)*n(it.harga)))});
+ add(g);row("Ongkos mobil",rpa(n(S.mobil)));row("Kuli bongkar",rpa(n(S.kuli)));
+ add(g);row("TOTAL BAYAR",rpa(S._tb));
+ if(S.tal.length){add(g);add("TALANGAN");add(g);
+  S.tal.forEach(function(t){row(t.ket||"Talangan",rpa(n(t.nom)))});
+  add(g);row("TOTAL TALANGAN",rpa(S._tt))}
+ add(e);mid("HARUS DIBAYAR");mid(rpa(S._tb-S._tt));add(e);
+ mid("Terima kasih");
+ for(var k=0;k<5;k++)add("");
+ var o=[0x1b,0x40],s=T.join("");
+ for(var i=0;i<s.length;i++)o.push(s.charCodeAt(i));
+ return o}
+function bangunLama(){
  var o=[],g='-'.repeat(W);
  function raw(){for(var i=0;i<arguments.length;i++)o.push(arguments[i])}
  function ln(s){s=ascii(s);for(var i=0;i<s.length;i++)o.push(s.charCodeAt(i));o.push(10)}
@@ -251,7 +275,7 @@ async function cetakBT(){
  try{
   if(!BTC||!BTD||!BTD.gatt.connected){
    st("Pilih printer Bluetooth...");
-   BTD=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:["000018f0-0000-1000-8000-00805f9b34fb","0000ffe0-0000-1000-8000-00805f9b34fb","0000ff00-0000-1000-8000-00805f9b34fb","e7810a71-73ae-499d-8c15-faa9aef0c3f2","49535343-fe7d-4ae5-8fa9-9fafd205e455","0000fee7-0000-1000-8000-00805f9b34fb"]});
+   BTD=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:["000018f0-0000-1000-8000-00805f9b34fb","0000ffe0-0000-1000-8000-00805f9b34fb","0000ff00-0000-1000-8000-00805f9b34fb","e7810a71-73ae-499d-8c15-faa9aef0c3f2","49535343-fe7d-4ae5-8fa9-9fafd205e455","0000fee7-0000-1000-8000-00805f9b34fb","0000ae30-0000-1000-8000-00805f9b34fb","0000ffe5-0000-1000-8000-00805f9b34fb","0000fff0-0000-1000-8000-00805f9b34fb","00001101-0000-1000-8000-00805f9b34fb","0000af30-0000-1000-8000-00805f9b34fb"]});
    st("Menyambung ke "+(BTD.name||"printer")+"...");
    var sv=await BTD.gatt.connect().then(function(s){return s.getPrimaryServices()});
    BTC=null;
