@@ -209,6 +209,42 @@ function struk(){
  if(S.tal.length){L.push(g,"Talangan:");S.tal.forEach(function(t){L.push(pd("  "+(t.ket||"Talangan"),rpa(n(t.nom))))});L.push(pd("Total talangan",rpa(S._tt)))}
  L.push(g,"HARUS DIBAYAR",rpa(S._tb-S._tt).padStart(W),g,"Terima kasih".padStart(Math.floor((W+12)/2)),"","","");
  return ascii(L.join("\n"))}
+function wrapT(s,w){s=ascii(s);var out=[],cur='';s.split(' ').forEach(function(wd){while(wd.length>w){if(cur){out.push(cur);cur=''}out.push(wd.slice(0,w));wd=wd.slice(w)}if(!cur)cur=wd;else if((cur+' '+wd).length<=w)cur+=' '+wd;else{out.push(cur);cur=wd}});if(cur)out.push(cur);return out.length?out:['']}
+function bangun(){
+ var o=[],g='-'.repeat(W);
+ function raw(){for(var i=0;i<arguments.length;i++)o.push(arguments[i])}
+ function ln(s){s=ascii(s);for(var i=0;i<s.length;i++)o.push(s.charCodeAt(i));o.push(10)}
+ function al(a){raw(0x1b,0x61,a)}
+ function bd(v){raw(0x1b,0x45,v?1:0)}
+ function sz(v){raw(0x1d,0x21,v)}
+ function row(l,r){l=ascii(l);r=ascii(r);if(l.length+r.length+1>W)l=l.slice(0,W-r.length-1);ln(l+' '.repeat(W-l.length-r.length)+r)}
+ raw(0x1b,0x40);
+ al(1);bd(1);sz(0x01);ln('NOTA BATA BOLONG');sz(0);bd(0);
+ ln(S.tgl);
+ if(S.nama){bd(1);wrapT('Pembeli: '+S.nama,W).forEach(ln);bd(0)}
+ al(0);ln(g);
+ bd(1);ln('ORDERAN');bd(0);
+ S.items.forEach(function(it){
+  bd(1);wrapT(it.ket||'Barang',W).forEach(ln);bd(0);
+  var l='  '+n(it.qty).toLocaleString('id-ID')+' x '+rpa(n(it.harga)),r=rpa(n(it.qty)*n(it.harga));
+  if(l.length+r.length+1>W){ln(l);ln(' '.repeat(Math.max(0,W-r.length))+r)}else row(l,r)});
+ ln(g);
+ row('Ongkos mobil',rpa(n(S.mobil)));
+ row('Kuli bongkar',rpa(n(S.kuli)));
+ ln(g);
+ bd(1);row('TOTAL BAYAR',rpa(S._tb));bd(0);
+ if(S.tal.length){
+  ln(g);bd(1);ln('TALANGAN');bd(0);
+  S.tal.forEach(function(t){var k=wrapT(t.ket||'Talangan',W-14);
+   row(k[0],'- '+rpa(n(t.nom)));for(var i=1;i<k.length;i++)ln(k[i])});
+  bd(1);row('Total talangan','- '+rpa(S._tt));bd(0)}
+ ln(g);
+ al(1);bd(1);ln('HARUS DIBAYAR');
+ var a=rpa(S._tb-S._tt);sz(a.length<=16?0x11:0x01);ln(a);sz(0);bd(0);
+ al(0);ln(g);
+ al(1);ln('Terima kasih');al(0);
+ raw(0x1b,0x64,4);
+ return o}
 async function cetakBT(){
  if(!navigator.bluetooth){st("Browser ini tidak mendukung Bluetooth. Pakai Chrome di Android atau komputer, bukan iPhone.");return}
  var b=$("bb");b.disabled=true;
@@ -224,8 +260,7 @@ async function cetakBT(){
    if(!BTC)throw new Error("Printer tidak punya jalur tulis yang dikenali");
   }
   st("Mencetak...");
-  var enc=new TextEncoder(),txt=enc.encode(struk()),d=new Uint8Array(txt.length+2);
-  d.set([0x1b,0x40]);d.set(txt,2);
+  var d=new Uint8Array(bangun());
   for(var p=0;p<d.length;p+=20){var ch=d.slice(p,p+20);
    if(BTC.properties.writeWithoutResponse)await BTC.writeValueWithoutResponse(ch);else await BTC.writeValue(ch);
    await new Promise(function(r){setTimeout(r,20)})}
